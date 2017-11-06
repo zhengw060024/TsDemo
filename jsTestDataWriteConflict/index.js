@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const Rx = require("rxjs/Rx");
 //生成从minNum到maxNum的随机数
 function randomNum(minNum, maxNum) {
     return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
@@ -81,7 +82,44 @@ class MyClassTest {
             arrayNotifyUpating: []
         };
     }
+    insertArrayRxWrap(ArrayInput) {
+        return Rx.Observable.create((observer) => {
+            this.insertObjArray(ArrayInput, (err, data) => {
+                if (err) {
+                    observer.error(err);
+                }
+                else {
+                    observer.next(data);
+                }
+                observer.complete();
+            });
+        });
+    }
+    removeArrayDataRxWrap(ArrayIdInput) {
+        return Rx.Observable.create((observer) => {
+            this.removeObjsByArrayId(ArrayIdInput, (err, data) => {
+                if (err) {
+                    observer.error(err);
+                }
+                else {
+                    observer.next(data);
+                }
+                observer.complete();
+            });
+        });
+    }
+    updateDataRxWrap(ArrayIdInput) {
+        const ArrayId = [];
+        ArrayIdInput.forEach((value, index) => {
+            ArrayId.push(value.id);
+        });
+        return this.removeArrayDataRxWrap(ArrayId).concatMap((data) => {
+            return this.insertArrayRxWrap(ArrayIdInput);
+        });
+    }
     insertObjArray(ArrayInput, callback) {
+        const nTimerspan = this.getRandomRunTime();
+        console.log('insert timer span ', nTimerspan);
         setTimeout(() => {
             let bExisted = false;
             ArrayInput.forEach((value, index) => {
@@ -99,9 +137,11 @@ class MyClassTest {
                     callback(null, ArrayInput.length);
                 });
             }
-        }, this.getRandomRunTime());
+        }, nTimerspan);
     }
     removeObjsByArrayId(ArrayIdInput, callback) {
+        const nTimerspan = this.getRandomRunTime();
+        console.log('remove timer span ', nTimerspan);
         setTimeout(() => {
             let numDelete = 0;
             ArrayIdInput.forEach((value, index) => {
@@ -111,7 +151,7 @@ class MyClassTest {
                 }
             });
             callback(null, numDelete);
-        }, this.getRandomRunTime());
+        }, nTimerspan);
     }
     updateCatchData() {
         const ArrayId = [];
@@ -194,15 +234,46 @@ class MyClassTest {
             }
         });
     }
+    updateDataArray2(ArrayInput) {
+        return new Promise((resolve, reject) => {
+            const ArrayId = [];
+            ArrayInput.forEach((value, index) => {
+                ArrayId.push(value.id);
+            });
+            this.removeObjsByArrayId(ArrayId, (err, numdelete) => {
+                if (err) {
+                    return reject(err);
+                }
+                else {
+                    this.insertObjArray(ArrayInput, (err2, numChange) => {
+                        if (err2) {
+                            console.log(err2);
+                            reject(err2);
+                        }
+                        else {
+                            resolve(numChange);
+                        }
+                    });
+                }
+            });
+        });
+    }
     testCase(num) {
         for (let i = 0; i < num; ++i) {
-            this.updateDataArray(getArrayInput()).then(data => {
+            this.updateDataArray2(getArrayInput()).then(data => {
             }).catch(err => {
                 console.log(err);
+            });
+        }
+    }
+    testCase2(num) {
+        for (let i = 0; i < num; ++i) {
+            this.updateDataRxWrap(getArrayInput()).subscribe((data) => {
+                console.log(data);
             });
         }
     }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase(10);
+runTest.testCase2(10);

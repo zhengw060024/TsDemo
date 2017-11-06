@@ -1,4 +1,5 @@
 import * as events from 'events';
+import * as Rx from 'rxjs/Rx';
 interface ObjTypeTest {
     id: string;
     name: string;
@@ -102,8 +103,42 @@ class MyClassTest {
             arrayNotifyUpating: []
         }
     }
-
+    private insertArrayRxWrap(ArrayInput: Array<ObjTypeTest>){
+        return Rx.Observable.create((observer:any) => {
+            this.insertObjArray(ArrayInput,(err:any,data:any) => {
+                if(err){
+                    observer.error(err);
+                } else {
+                    observer.next(data);
+                }
+                observer.complete();
+            })
+        });
+    }
+    private removeArrayDataRxWrap(ArrayIdInput: Array<string>){
+        return Rx.Observable.create((observer:any) =>{
+            this.removeObjsByArrayId(ArrayIdInput, (err:any, data:any) => {
+                if(err){
+                    observer.error(err);
+                } else {
+                    observer.next(data);
+                }
+                observer.complete();
+            });
+        });
+    }
+    updateDataRxWrap(ArrayIdInput: Array<ObjTypeTest>) {
+        const ArrayId: Array<string> = [];
+        ArrayIdInput.forEach((value, index) => {
+            ArrayId.push(value.id);
+        });
+        return this.removeArrayDataRxWrap(ArrayId).concatMap((data:any) => {
+           return this.insertArrayRxWrap(ArrayIdInput);
+        });
+    }
     private insertObjArray(ArrayInput: Array<ObjTypeTest>, callback: any) {
+        const nTimerspan = this.getRandomRunTime();
+        console.log('insert timer span ', nTimerspan);
         setTimeout(() => {
             let bExisted = false;
             ArrayInput.forEach((value, index) => {
@@ -121,9 +156,11 @@ class MyClassTest {
                 })
             }
 
-        }, this.getRandomRunTime());
+        }, nTimerspan);
     }
     private removeObjsByArrayId(ArrayIdInput: Array<string>, callback: any) {
+        const nTimerspan = this.getRandomRunTime();
+        console.log('remove timer span ', nTimerspan);
         setTimeout(() => {
             let numDelete = 0;
             ArrayIdInput.forEach((value, index) => {
@@ -133,7 +170,7 @@ class MyClassTest {
                 }
             });
             callback(null, numDelete);
-        }, this.getRandomRunTime());
+        }, nTimerspan);
     }
     private updateCatchData() {
         const ArrayId: Array<string> = [];
@@ -214,9 +251,31 @@ class MyClassTest {
             }
         });
     }
+    updateDataArray2(ArrayInput: Array<ObjTypeTest>) {
+        return new Promise((resolve, reject) => {
+            const ArrayId: Array<string> = [];
+            ArrayInput.forEach((value, index) => {
+                ArrayId.push(value.id);
+            });
+            this.removeObjsByArrayId(ArrayId, (err: any, numdelete: number) => {
+                if (err) {
+                    return reject(err);
+                } else {
+                    this.insertObjArray(ArrayInput, (err2: any, numChange: number) => {
+                        if (err2) {
+                            console.log(err2);
+                            reject(err2);
+                        } else {
+                            resolve(numChange);
+                        }
+                    });
+                }
+            });
+        });
+    }
     testCase(num: number) {
         for (let i = 0; i < num; ++i) {
-            this.updateDataArray(getArrayInput()).then(data => {
+            this.updateDataArray2(getArrayInput()).then(data => {
 
             }).catch(err => {
                 console.log(err);
@@ -224,7 +283,15 @@ class MyClassTest {
 
         }
     }
+    testCase2(num: number) {
+        for (let i = 0; i < num; ++i) {
+            this.updateDataRxWrap(getArrayInput()).subscribe((data :any) =>{
+                console.log(data);
+            });
+
+        }
+    }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase(10);
+runTest.testCase2(10);
