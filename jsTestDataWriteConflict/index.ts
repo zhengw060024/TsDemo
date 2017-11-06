@@ -88,7 +88,8 @@ class MyClassTest {
    // private m_eventUpating: events.EventEmitter;
     private m_bUpating: boolean;
     private m_mapUpatCatchInfo: UpateDataCatcheInfo;
-
+    private m_subjectUpdateMgr :Rx.Subject<Array<ObjTypeTest>>;
+    private m_subjectTest :Rx.Subject<number>;
     private getRandomRunTime() {
         return randomNum(1000, 3000);
     }
@@ -102,6 +103,8 @@ class MyClassTest {
             arrayNotify: [],
             arrayNotifyUpating: []
         }
+        this.m_subjectUpdateMgr = new Rx.Subject<Array<ObjTypeTest>>();
+        this.m_subjectTest = new Rx.Subject<number>();
     }
     private insertArrayRxWrap(ArrayInput: Array<ObjTypeTest>){
         return Rx.Observable.create((observer:any) => {
@@ -135,6 +138,18 @@ class MyClassTest {
         return this.removeArrayDataRxWrap(ArrayId).concatMap((data:any) => {
            return this.insertArrayRxWrap(ArrayIdInput);
         });
+    }
+    addUpdataRequest(ArrayIdInput: Array<ObjTypeTest>) {
+        // console.log(ArrayIdInput);
+        this.m_subjectUpdateMgr.next(ArrayIdInput);
+    }
+    updateDataRxWrap2() {
+        
+        return this.m_subjectUpdateMgr.concatMap(data => {
+            return this.updateDataRxWrap(data);
+        });
+      
+        //return result;
     }
     private insertObjArray(ArrayInput: Array<ObjTypeTest>, callback: any) {
         const nTimerspan = this.getRandomRunTime();
@@ -291,7 +306,44 @@ class MyClassTest {
 
         }
     }
+    testCase3(num: number) {
+        this.updateDataRxWrap2().subscribe(data =>{
+            console.log(data);
+        })
+        for (let i = 0; i < num; ++i) {
+            this.addUpdataRequest(getArrayInput());
+
+        }
+    }
+    testConcatMap(id: number){
+        return Rx.Observable.create((observer: any) => {
+            setTimeout(() =>{
+                observer.next();
+                console.log( `work id ${id} ending`);
+                observer.complete();
+            },this.getRandomRunTime());
+        });
+    }
+    getResult()
+    {
+        const result =  this.m_subjectTest.concatMap(data => {
+            return this.testConcatMap(data);
+        });
+        return result;
+    }
+    testRxWrap (num: number) {
+        this.m_subjectTest.next(num);
+        
+    }
+    testCase4(num: number) {
+        this.getResult().subscribe(data => {
+
+        });
+        for (let i = 0; i < num; ++i) {
+            this.testRxWrap(i);
+        }
+    }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase2(10);
+runTest.testCase3(10);

@@ -81,6 +81,8 @@ class MyClassTest {
             arrayNotify: [],
             arrayNotifyUpating: []
         };
+        this.m_subjectUpdateMgr = new Rx.Subject();
+        this.m_subjectTest = new Rx.Subject();
     }
     insertArrayRxWrap(ArrayInput) {
         return Rx.Observable.create((observer) => {
@@ -116,6 +118,16 @@ class MyClassTest {
         return this.removeArrayDataRxWrap(ArrayId).concatMap((data) => {
             return this.insertArrayRxWrap(ArrayIdInput);
         });
+    }
+    addUpdataRequest(ArrayIdInput) {
+        // console.log(ArrayIdInput);
+        this.m_subjectUpdateMgr.next(ArrayIdInput);
+    }
+    updateDataRxWrap2() {
+        return this.m_subjectUpdateMgr.concatMap(data => {
+            return this.updateDataRxWrap(data);
+        });
+        //return result;
     }
     insertObjArray(ArrayInput, callback) {
         const nTimerspan = this.getRandomRunTime();
@@ -273,7 +285,40 @@ class MyClassTest {
             });
         }
     }
+    testCase3(num) {
+        this.updateDataRxWrap2().subscribe(data => {
+            console.log(data);
+        });
+        for (let i = 0; i < num; ++i) {
+            this.addUpdataRequest(getArrayInput());
+        }
+    }
+    testConcatMap(id) {
+        return Rx.Observable.create((observer) => {
+            setTimeout(() => {
+                observer.next();
+                console.log(`work id ${id} ending`);
+                observer.complete();
+            }, this.getRandomRunTime());
+        });
+    }
+    getResult() {
+        const result = this.m_subjectTest.concatMap(data => {
+            return this.testConcatMap(data);
+        });
+        return result;
+    }
+    testRxWrap(num) {
+        this.m_subjectTest.next(num);
+    }
+    testCase4(num) {
+        this.getResult().subscribe(data => {
+        });
+        for (let i = 0; i < num; ++i) {
+            this.testRxWrap(i);
+        }
+    }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase2(10);
+runTest.testCase3(10);
