@@ -123,6 +123,22 @@ class MyClassTest {
             return this.insertArrayRxWrap(ArrayIdInput);
         });
     }
+    updateDataRxWrap4(ArrayIdInput) {
+        const ArrayId = [];
+        ArrayIdInput.forEach((value, index) => {
+            ArrayId.push(value.id);
+        });
+        return this.removeArrayDataRxWrap(ArrayId).concatMap((data) => {
+            return this.insertArrayRxWrap(ArrayIdInput);
+        });
+    }
+    updateDataRxWrap6(ArrayIdInput) {
+        const result = this.m_subjectUpdateMgr.concatMap(data => {
+            return this.updateDataRxWrap(data);
+        }).publishReplay(1).refCount();
+        this.m_subjectUpdateMgr.next(ArrayIdInput);
+        return result;
+    }
     addUpdataRequest(ArrayIdInput) {
         // console.log(ArrayIdInput);
         this.m_subjectUpdateMgr.next(ArrayIdInput);
@@ -327,6 +343,13 @@ class MyClassTest {
             });
         }
     }
+    testCase6(num) {
+        for (let i = 0; i < num; ++i) {
+            this.updateDataRxWrap6(getArrayInput()).subscribe(data => {
+                console.log(data);
+            });
+        }
+    }
     testRxWrap2(num) {
         this.m_subjectTest.next(num);
         return this.m_subjectUpdateTest.filter(data => {
@@ -346,4 +369,4 @@ class MyClassTest {
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase5(20);
+runTest.testCase6(20);

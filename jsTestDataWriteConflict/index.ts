@@ -144,6 +144,22 @@ class MyClassTest {
            return this.insertArrayRxWrap(ArrayIdInput);
         });
     }
+    updateDataRxWrap4(ArrayIdInput: Array<ObjTypeTest>) {
+        const ArrayId: Array<string> = [];
+        ArrayIdInput.forEach((value, index) => {
+            ArrayId.push(value.id);
+        });
+        return this.removeArrayDataRxWrap(ArrayId).concatMap((data:any) => {
+           return this.insertArrayRxWrap(ArrayIdInput);
+        });
+    }
+    updateDataRxWrap6(ArrayIdInput: Array<ObjTypeTest>) {
+       const result =  this.m_subjectUpdateMgr.concatMap(data => {
+            return this.updateDataRxWrap(data);
+        }).publishReplay(1).refCount();
+        this.m_subjectUpdateMgr.next(ArrayIdInput);
+        return result;
+    }
     addUpdataRequest(ArrayIdInput: Array<ObjTypeTest>) {
         // console.log(ArrayIdInput);
         this.m_subjectUpdateMgr.next(ArrayIdInput);
@@ -354,6 +370,14 @@ class MyClassTest {
             });
         }
     }
+    testCase6(num: number) {
+        for (let i = 0; i < num; ++i) {
+            this.updateDataRxWrap6(getArrayInput()).subscribe(data =>{
+                console.log(data);
+            })
+
+        }
+    }
     testRxWrap2(num:number) {
         this.m_subjectTest.next(num);
         return this.m_subjectUpdateTest.filter(data => {
@@ -370,7 +394,10 @@ class MyClassTest {
         // this.m_subjectTest.next(num);
         // return result;
     }
+    // testRxWrap3(num:number) {
+    //     // this.m
+    // }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase5(20);
+runTest.testCase6(20);
