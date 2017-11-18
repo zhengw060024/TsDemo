@@ -1,5 +1,7 @@
 import * as events from 'events';
 import * as Rx from 'rxjs/Rx';
+import { timeout } from 'rxjs/operator/timeout';
+// 模拟仿真测试数据
 interface ObjTypeTest {
     id: string;
     name: string;
@@ -8,7 +10,11 @@ interface ObjTypeTest {
 function randomNum(minNum: any, maxNum: any) {
     return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
 }
+// 模拟原始数据
 const ArrayOrgin: Array<ObjTypeTest> = [];
+/**
+ * 初始化原始数据
+ */
 function initArrayOgrin() {
     ArrayOrgin.push({
         id: '12',
@@ -51,6 +57,10 @@ function initArrayOgrin() {
         name: 'jim21'
     });
 }
+/**
+ * 生成一个随机人员序列
+ * 模拟可能的更新请求
+ */
 function getArrayInput() {
     const num1 = randomNum(0, ArrayOrgin.length - 1);
     const num2 = randomNum(0, ArrayOrgin.length - 1);
@@ -72,6 +82,8 @@ function getArrayInput() {
     }
     return ArrayOut;
 }
+
+// 在不使用rx时一种解决方案临时数据
 interface UpdateBuffNotify {
     resolve: any;
     reject: any
@@ -83,34 +95,46 @@ interface UpateDataCatcheInfo {
     arrayNotify: Array<UpdateBuffNotify>;
     arrayNotifyUpating: Array<UpdateBuffNotify>;
 }
+///////////////////
+////测试类，该类在插入数据时，
+////必须保证缓存中的数据没有已存在的项目，否则报错。
+///////////////////
 class MyClassTest {
     private m_mapBuffer: Map<string, ObjTypeTest>;
-   // private m_eventUpating: events.EventEmitter;
     private m_bUpating: boolean;
     private m_mapUpatCatchInfo: UpateDataCatcheInfo;
+
     private m_subjectUpdateMgr :Rx.Subject<Array<ObjTypeTest>>;
-    private m_subjectTest :Rx.Subject<number>;
-    private m_subjectUpdateTest :Rx.Subject<number>;
+    private m_obersevableUpdate:Rx.Observable<any>;
+
     private getRandomRunTime() {
         return randomNum(1000, 3000);
     }
     constructor() {
-        this.m_mapBuffer = new Map<string, ObjTypeTest>();
+
+        this.m_mapBuffer = new Map<string, ObjTypeTest>();// 缓存
+        //  在不使用rx时保证实现跟新不冲突的一种手段，这种手段引入了大量的状态
+        // 造成了很多边际效应，写出来的代码非常不好维护
         this.m_bUpating = false;
-      //  this.m_eventUpating = new events.EventEmitter();
         this.m_mapUpatCatchInfo = {
             mapToUpte: new Map<string, ObjTypeTest>(),
-            //mapUpating: new Map<string, ObjTypeTest>(),
             arrayNotify: [],
             arrayNotifyUpating: []
         }
+        /////////////////////////////
+        // 使用rx的一个解决方案，这个方案在于将输入作为一个流，
         this.m_subjectUpdateMgr = new Rx.Subject<Array<ObjTypeTest>>();
-        this.m_subjectTest = new Rx.Subject<number>();
-        this.m_subjectUpdateTest = new Rx.Subject<number>();
-        this.getResult().subscribe(data => {
-            this.m_subjectUpdateTest.next(data);
-         });
+        this.getUpdateObjResult().subscribe(data => {
+            console.log(data);
+        });
+
+        // 其实使用一个中间状态和FlatMap很容易就解决了这个问题，
+        this.m_obersevableUpdate = null; //保存上次请求的状态
     }
+    /**
+     * 插入过程Rx封装
+     * @param ArrayInput 
+     */
     private insertArrayRxWrap(ArrayInput: Array<ObjTypeTest>){
         return Rx.Observable.create((observer:any) => {
             this.insertObjArray(ArrayInput,(err:any,data:any) => {
@@ -123,6 +147,10 @@ class MyClassTest {
             })
         });
     }
+    /**
+     * 删除过程rx封装
+     * @param ArrayIdInput 
+     */
     private removeArrayDataRxWrap(ArrayIdInput: Array<string>){
         return Rx.Observable.create((observer:any) =>{
             this.removeObjsByArrayId(ArrayIdInput, (err:any, data:any) => {
@@ -135,6 +163,10 @@ class MyClassTest {
             });
         });
     }
+    /**
+     * 更新过程rx封装
+     * @param ArrayIdInput 
+     */
     updateDataRxWrap(ArrayIdInput: Array<ObjTypeTest>) {
         const ArrayId: Array<string> = [];
         ArrayIdInput.forEach((value, index) => {
@@ -144,34 +176,28 @@ class MyClassTest {
            return this.insertArrayRxWrap(ArrayIdInput);
         });
     }
-    updateDataRxWrap4(ArrayIdInput: Array<ObjTypeTest>) {
-        const ArrayId: Array<string> = [];
-        ArrayIdInput.forEach((value, index) => {
-            ArrayId.push(value.id);
-        });
-        return this.removeArrayDataRxWrap(ArrayId).concatMap((data:any) => {
-           return this.insertArrayRxWrap(ArrayIdInput);
-        });
-    }
-    updateDataRxWrap6(ArrayIdInput: Array<ObjTypeTest>) {
-       const result =  this.m_subjectUpdateMgr.concatMap(data => {
-            return this.updateDataRxWrap(data);
-        }).publishReplay(1).refCount();
-        this.m_subjectUpdateMgr.next(ArrayIdInput);
-        return result;
-    }
+
+    /**
+     * 添加跟新请求，这种方案其实很蠢
+     * 1：不方便离散请求
+     * 2：给原始库添加了一个不必要的管理请求
+     * @param ArrayIdInput 
+     */
     addUpdataRequest(ArrayIdInput: Array<ObjTypeTest>) {
-        // console.log(ArrayIdInput);
         this.m_subjectUpdateMgr.next(ArrayIdInput);
     }
-    updateDataRxWrap2() {
-        
+
+    private getUpdateObjResult() {
         return this.m_subjectUpdateMgr.concatMap(data => {
             return this.updateDataRxWrap(data);
         });
-      
-        //return result;
     }
+    /**
+     * 模拟插入数据过程，如果插入的数据已存在
+     * 则报错退出
+     * @param ArrayInput 
+     * @param callback 
+     */
     private insertObjArray(ArrayInput: Array<ObjTypeTest>, callback: any) {
         const nTimerspan = this.getRandomRunTime();
         console.log('insert timer span ', nTimerspan);
@@ -194,6 +220,11 @@ class MyClassTest {
 
         }, nTimerspan);
     }
+    /**
+     * 模拟删除过程
+     * @param ArrayIdInput 
+     * @param callback 
+     */
     private removeObjsByArrayId(ArrayIdInput: Array<string>, callback: any) {
         const nTimerspan = this.getRandomRunTime();
         console.log('remove timer span ', nTimerspan);
@@ -208,6 +239,11 @@ class MyClassTest {
             callback(null, numDelete);
         }, nTimerspan);
     }
+    /**
+     * 不使用Rx的内部管理更新过程
+     * 代码相当的复杂，并且难以维护
+     * 也很难移植
+     */
     private updateCatchData() {
         const ArrayId: Array<string> = [];
         const ArrayInput: Array<ObjTypeTest> = [];
@@ -250,6 +286,10 @@ class MyClassTest {
             }
         });
     }
+    /**
+     * 不使用rx的可以正确更新的过程
+     * @param ArrayInput 
+     */
     updateDataArray(ArrayInput: Array<ObjTypeTest>) {
         return new Promise((resolve, reject) => {
 
@@ -287,6 +327,10 @@ class MyClassTest {
             }
         });
     }
+    /**
+     * 模拟错误的更新过程
+     * @param ArrayInput 
+     */
     updateDataArray2(ArrayInput: Array<ObjTypeTest>) {
         return new Promise((resolve, reject) => {
             const ArrayId: Array<string> = [];
@@ -309,95 +353,73 @@ class MyClassTest {
             });
         });
     }
-    testCase(num: number) {
+    // 最好的解决方案
+    // 要注意hot observalbe 和cold observalble的区别
+    updateDataRxPerfect(ArrayInput: Array<ObjTypeTest>) {
+        let  temp = null;
+        if(this.m_obersevableUpdate) {
+          temp=  this.m_obersevableUpdate.concatMap(data =>{
+               return this.updateDataRxWrap(ArrayInput).publishReplay(1).refCount();
+            }).publishReplay(1).refCount();
+        } else {
+            temp = this.updateDataRxWrap(ArrayInput).publishReplay(1).refCount();
+        }
+        this.m_obersevableUpdate = temp;
+        return temp;
+    }
+    /**
+     * 错误更新过程模拟测试
+     * @param num 
+     */
+    testCaseError(num: number) {
         for (let i = 0; i < num; ++i) {
             this.updateDataArray2(getArrayInput()).then(data => {
 
             }).catch(err => {
                 console.log(err);
-            })
-
+            });
         }
     }
-    testCase2(num: number) {
+    testCaseCorrect(num: number) {
         for (let i = 0; i < num; ++i) {
-            this.updateDataRxWrap(getArrayInput()).subscribe((data :any) =>{
+            this.updateDataArray(getArrayInput()).then((data :any) =>{
                 console.log(data);
             });
 
         }
     }
-    testCase3(num: number) {
-        this.updateDataRxWrap2().subscribe(data =>{
-            console.log(data);
-        })
+    /**
+     * 这种方式在于不便跟踪返回状态，
+     * 且给原始库中添加了不必要的管理功能
+     * @param num 
+     */
+    testCaseCorrectRx1(num: number) {
         for (let i = 0; i < num; ++i) {
             this.addUpdataRequest(getArrayInput());
-
         }
     }
-    testConcatMap(id: number):Rx.Observable<number>{
-        return Rx.Observable.create((observer: any) => {
-            setTimeout(() =>{
-                observer.next(id);
-                console.log( `work id ${id} ending`);
-                observer.complete(id);
-            },this.getRandomRunTime());
-        });
-    }
-    getResult()
-    {
-        const result =  this.m_subjectTest.concatMap(data => {
-            return this.testConcatMap(data);
-        });
-        return result;
-    }
-    testRxWrap (num: number) {
-        this.m_subjectTest.next(num);
-        
-    }
-    testCase4(num: number) {
-      
+    testCaseCorrectRx2(num: number) {
         for (let i = 0; i < num; ++i) {
-            this.testRxWrap(i);
-        }
-    }
-    testCase5(num: number) {
-        for (let i = 0; i < num; ++i) {
-            this.testRxWrap2(i).subscribe((data:number) => {
-                console.log('test work id complete!!!!',data);
-
+            this.updateDataRxPerfect(getArrayInput()).subscribe(data =>{
+                console.log(`${i} is complete,${data}`);
             });
         }
-    }
-    testCase6(num: number) {
         for (let i = 0; i < num; ++i) {
-            this.updateDataRxWrap6(getArrayInput()).subscribe(data =>{
-                console.log(data);
-            })
-
+            let nTimeOut = randomNum(1000, 7000);
+            setTimeout(() => {
+                this.updateDataRxPerfect(getArrayInput()).subscribe(data =>{
+                    console.log(`${i} timeout is complete,${data},timerOut is ${nTimeOut}`);
+                });
+            }, nTimeOut);
         }
+        setTimeout(() => {
+            this.updateDataRxPerfect(getArrayInput()).subscribe(data =>{
+                console.log(` timeout is complete,${data},timerOut is 120000`);
+            });
+        }, 120000);
+        
     }
-    testRxWrap2(num:number) {
-        this.m_subjectTest.next(num);
-        return this.m_subjectUpdateTest.filter(data => {
-            if(data === num) {
-                return true;
-            }
-            return false;
-        });
-        //return this.getResult().
-        // const result =  this.m_subjectTest.concatMap(data => {
-        //     return this.testConcatMap(data);
-        // });
-        // // result.subscribeOn(Rx.Scheduler.animationFrame)
-        // this.m_subjectTest.next(num);
-        // return result;
-    }
-    // testRxWrap3(num:number) {
-    //     // this.m
-    // }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase6(20);
+runTest.testCaseCorrectRx2(5);
