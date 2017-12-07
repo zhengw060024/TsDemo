@@ -5,7 +5,11 @@ const Rx = require("rxjs/Rx");
 function randomNum(minNum, maxNum) {
     return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
 }
+// 模拟原始数据
 const ArrayOrgin = [];
+/**
+ * 初始化原始数据
+ */
 function initArrayOgrin() {
     ArrayOrgin.push({
         id: '12',
@@ -48,6 +52,10 @@ function initArrayOgrin() {
         name: 'jim21'
     });
 }
+/**
+ * 生成一个随机人员序列
+ * 模拟可能的更新请求
+ */
 function getArrayInput() {
     const num1 = randomNum(0, ArrayOrgin.length - 1);
     const num2 = randomNum(0, ArrayOrgin.length - 1);
@@ -67,27 +75,37 @@ function getArrayInput() {
     }
     return ArrayOut;
 }
+///////////////////
+////测试类，该类在插入数据时，
+////必须保证缓存中的数据没有已存在的项目，否则报错。
+///////////////////
 class MyClassTest {
     getRandomRunTime() {
         return randomNum(1000, 3000);
     }
     constructor() {
-        this.m_mapBuffer = new Map();
+        this.m_mapBuffer = new Map(); // 缓存
+        //  在不使用rx时保证实现跟新不冲突的一种手段，这种手段引入了大量的状态
+        // 造成了很多边际效应，写出来的代码非常不好维护
         this.m_bUpating = false;
-        //  this.m_eventUpating = new events.EventEmitter();
         this.m_mapUpatCatchInfo = {
             mapToUpte: new Map(),
-            //mapUpating: new Map<string, ObjTypeTest>(),
             arrayNotify: [],
             arrayNotifyUpating: []
         };
+        /////////////////////////////
+        // 使用rx的一个解决方案，这个方案在于将输入作为一个流，
         this.m_subjectUpdateMgr = new Rx.Subject();
-        this.m_subjectTest = new Rx.Subject();
-        this.m_subjectUpdateTest = new Rx.Subject();
-        this.getResult().subscribe(data => {
-            this.m_subjectUpdateTest.next(data);
+        this.getUpdateObjResult().subscribe(data => {
+            console.log(data);
         });
+        // 其实使用一个中间状态和FlatMap很容易就解决了这个问题，
+        this.m_obersevableUpdate = null; //保存上次请求的状态
     }
+    /**
+     * 插入过程Rx封装
+     * @param ArrayInput
+     */
     insertArrayRxWrap(ArrayInput) {
         return Rx.Observable.create((observer) => {
             this.insertObjArray(ArrayInput, (err, data) => {
@@ -101,6 +119,10 @@ class MyClassTest {
             });
         });
     }
+    /**
+     * 删除过程rx封装
+     * @param ArrayIdInput
+     */
     removeArrayDataRxWrap(ArrayIdInput) {
         return Rx.Observable.create((observer) => {
             this.removeObjsByArrayId(ArrayIdInput, (err, data) => {
@@ -114,6 +136,10 @@ class MyClassTest {
             });
         });
     }
+    /**
+     * 更新过程rx封装
+     * @param ArrayIdInput
+     */
     updateDataRxWrap(ArrayIdInput) {
         const ArrayId = [];
         ArrayIdInput.forEach((value, index) => {
@@ -123,32 +149,26 @@ class MyClassTest {
             return this.insertArrayRxWrap(ArrayIdInput);
         });
     }
-    updateDataRxWrap4(ArrayIdInput) {
-        const ArrayId = [];
-        ArrayIdInput.forEach((value, index) => {
-            ArrayId.push(value.id);
-        });
-        return this.removeArrayDataRxWrap(ArrayId).concatMap((data) => {
-            return this.insertArrayRxWrap(ArrayIdInput);
-        });
-    }
-    updateDataRxWrap6(ArrayIdInput) {
-        const result = this.m_subjectUpdateMgr.concatMap(data => {
-            return this.updateDataRxWrap(data);
-        }).publishReplay(1).refCount();
-        this.m_subjectUpdateMgr.next(ArrayIdInput);
-        return result;
-    }
+    /**
+     * 添加跟新请求，这种方案其实很蠢
+     * 1：不方便离散请求
+     * 2：给原始库添加了一个不必要的管理请求
+     * @param ArrayIdInput
+     */
     addUpdataRequest(ArrayIdInput) {
-        // console.log(ArrayIdInput);
         this.m_subjectUpdateMgr.next(ArrayIdInput);
     }
-    updateDataRxWrap2() {
+    getUpdateObjResult() {
         return this.m_subjectUpdateMgr.concatMap(data => {
             return this.updateDataRxWrap(data);
         });
-        //return result;
     }
+    /**
+     * 模拟插入数据过程，如果插入的数据已存在
+     * 则报错退出
+     * @param ArrayInput
+     * @param callback
+     */
     insertObjArray(ArrayInput, callback) {
         const nTimerspan = this.getRandomRunTime();
         console.log('insert timer span ', nTimerspan);
@@ -171,6 +191,11 @@ class MyClassTest {
             }
         }, nTimerspan);
     }
+    /**
+     * 模拟删除过程
+     * @param ArrayIdInput
+     * @param callback
+     */
     removeObjsByArrayId(ArrayIdInput, callback) {
         const nTimerspan = this.getRandomRunTime();
         console.log('remove timer span ', nTimerspan);
@@ -185,6 +210,11 @@ class MyClassTest {
             callback(null, numDelete);
         }, nTimerspan);
     }
+    /**
+     * 不使用Rx的内部管理更新过程
+     * 代码相当的复杂，并且难以维护
+     * 也很难移植
+     */
     updateCatchData() {
         const ArrayId = [];
         const ArrayInput = [];
@@ -228,6 +258,10 @@ class MyClassTest {
             }
         });
     }
+    /**
+     * 不使用rx的可以正确更新的过程
+     * @param ArrayInput
+     */
     updateDataArray(ArrayInput) {
         return new Promise((resolve, reject) => {
             if (this.m_bUpating) {
@@ -266,6 +300,10 @@ class MyClassTest {
             }
         });
     }
+    /**
+     * 模拟错误的更新过程
+     * @param ArrayInput
+     */
     updateDataArray2(ArrayInput) {
         return new Promise((resolve, reject) => {
             const ArrayId = [];
@@ -290,7 +328,25 @@ class MyClassTest {
             });
         });
     }
-    testCase(num) {
+    // 最好的解决方案
+    updateDataRxPerfect(ArrayInput) {
+        let temp = null;
+        if (this.m_obersevableUpdate) {
+            temp = this.m_obersevableUpdate.concatMap(data => {
+                return this.updateDataRxWrap(ArrayInput).publishReplay(1).refCount();
+            }).publishReplay(1).refCount();
+        }
+        else {
+            temp = this.updateDataRxWrap(ArrayInput).publishReplay(1).refCount();
+        }
+        this.m_obersevableUpdate = temp;
+        return temp;
+    }
+    /**
+     * 错误更新过程模拟测试
+     * @param num
+     */
+    testCaseError(num) {
         for (let i = 0; i < num; ++i) {
             this.updateDataArray2(getArrayInput()).then(data => {
             }).catch(err => {
@@ -298,75 +354,44 @@ class MyClassTest {
             });
         }
     }
-    testCase2(num) {
+    testCaseCorrect(num) {
         for (let i = 0; i < num; ++i) {
-            this.updateDataRxWrap(getArrayInput()).subscribe((data) => {
+            this.updateDataArray(getArrayInput()).then((data) => {
                 console.log(data);
             });
         }
     }
-    testCase3(num) {
-        this.updateDataRxWrap2().subscribe(data => {
-            console.log(data);
-        });
+    /**
+     * 这种方式在于不便跟踪返回状态，
+     * 且给原始库中添加了不必要的管理功能
+     * @param num
+     */
+    testCaseCorrectRx1(num) {
         for (let i = 0; i < num; ++i) {
             this.addUpdataRequest(getArrayInput());
         }
     }
-    testConcatMap(id) {
-        return Rx.Observable.create((observer) => {
+    testCaseCorrectRx2(num) {
+        for (let i = 0; i < num; ++i) {
+            this.updateDataRxPerfect(getArrayInput()).subscribe(data => {
+                console.log(`${i} is complete,${data}`);
+            });
+        }
+        for (let i = 0; i < num; ++i) {
+            let nTimeOut = randomNum(1000, 7000);
             setTimeout(() => {
-                observer.next(id);
-                console.log(`work id ${id} ending`);
-                observer.complete(id);
-            }, this.getRandomRunTime());
-        });
-    }
-    getResult() {
-        const result = this.m_subjectTest.concatMap(data => {
-            return this.testConcatMap(data);
-        });
-        return result;
-    }
-    testRxWrap(num) {
-        this.m_subjectTest.next(num);
-    }
-    testCase4(num) {
-        for (let i = 0; i < num; ++i) {
-            this.testRxWrap(i);
+                this.updateDataRxPerfect(getArrayInput()).subscribe(data => {
+                    console.log(`${i} timeout is complete,${data},timerOut is ${nTimeOut}`);
+                });
+            }, nTimeOut);
         }
-    }
-    testCase5(num) {
-        for (let i = 0; i < num; ++i) {
-            this.testRxWrap2(i).subscribe((data) => {
-                console.log('test work id complete!!!!', data);
+        setTimeout(() => {
+            this.updateDataRxPerfect(getArrayInput()).subscribe(data => {
+                console.log(` timeout is complete,${data},timerOut is 120000`);
             });
-        }
-    }
-    testCase6(num) {
-        for (let i = 0; i < num; ++i) {
-            this.updateDataRxWrap6(getArrayInput()).subscribe(data => {
-                console.log(data);
-            });
-        }
-    }
-    testRxWrap2(num) {
-        this.m_subjectTest.next(num);
-        return this.m_subjectUpdateTest.filter(data => {
-            if (data === num) {
-                return true;
-            }
-            return false;
-        });
-        //return this.getResult().
-        // const result =  this.m_subjectTest.concatMap(data => {
-        //     return this.testConcatMap(data);
-        // });
-        // // result.subscribeOn(Rx.Scheduler.animationFrame)
-        // this.m_subjectTest.next(num);
-        // return result;
+        }, 120000);
     }
 }
 initArrayOgrin();
 const runTest = new MyClassTest();
-runTest.testCase6(20);
+runTest.testCaseCorrectRx2(5);
