@@ -329,6 +329,7 @@ class MyClassTest {
         });
     }
     // 最好的解决方案
+    // 要注意hot observalbe 和cold observalble的区别
     updateDataRxPerfect(ArrayInput) {
         let temp = null;
         if (this.m_obersevableUpdate) {
