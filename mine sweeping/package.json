@@ -1,7 +1,0 @@
-{
-  "name": "mine sweeping",
-  "version": "1.0.0",
-  "dependencies": {
-    "rxjs": "^5.5.2"
-  }
-}

@@ -25,12 +25,19 @@ class RxTestSelf {
     }
     testCaseCreate() {
         const subject = new Rx.Subject();
+        const tempObserve22 = subject;
         const tempObserve = subject.map(data => {
             console.log('zzzzzzzzzzzzzzzzz', data);
             return data;
         });
+        tempObserve22.subscribe(data => {
+            console.log('fdfsfdsafdasfdsa');
+        });
+        tempObserve22.subscribe(data => {
+            console.log("444444", data);
+        });
         tempObserve.subscribe(data => {
-            console.log("sssss", data);
+            console.log("3333333", data);
         });
         tempObserve.subscribe(data => {
             console.log("xxxx", data);
@@ -55,19 +62,6 @@ class RxTestSelf {
             console.log('dataxxxxxxxxxxxxx', data);
             return data * 2;
         }).subscribe(subject);
-        // delayedRange.subscribe(data => {
-        //     console.log (data);
-        // })
-        // setTimeout(() => {
-        //     delayedRange.subscribe(data => {
-        //         console.log (data);
-        //     });
-        // },1500);
-        // .subscribe(
-        // function onNext(item) { console.log('Value:', item); },
-        // function onError(err) { console.log('Error:', err); },
-        // function onCompleted() { console.log('Completed.'); }
-        // );
     }
     testCaseCreate2() {
         const subject = new Rx.Subject();
@@ -176,7 +170,7 @@ function testReduce() {
 const temp = new RxTestSelf();
 //temp.testCaseCreate(); 
 // temp.testCaseColdHot();
-temp.testCaseCreate2();
+temp.testCaseCreate();
 // testReduce();
 // let data = new Rx.Subject<number>();
 // // data.subscribe(data2 => {

@@ -26,13 +26,19 @@ class RxTestSelf {
     }
     testCaseCreate() {
         const subject = new Rx.Subject();
+        const tempObserve22 = subject;
         const tempObserve = subject.map(data => {
             console.log('zzzzzzzzzzzzzzzzz',data);
             return data;
         });
-
+        tempObserve22.subscribe(data => {
+            console.log('fdfsfdsafdasfdsa');
+        });
+        tempObserve22.subscribe(data => {
+            console.log("444444",data);
+        });
         tempObserve.subscribe(data => {
-            console.log("sssss",data);
+            console.log("3333333",data);
         });
         tempObserve.subscribe(data => {
             console.log("xxxx",data);
@@ -169,7 +175,7 @@ function testReduce() {
 const temp = new RxTestSelf();
 //temp.testCaseCreate(); 
 // temp.testCaseColdHot();
-temp.testCaseCreate2();
+temp.testCaseCreate();
 // testReduce();
 // let data = new Rx.Subject<number>();
 // // data.subscribe(data2 => {
