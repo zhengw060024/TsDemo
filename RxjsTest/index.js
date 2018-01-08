@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const Rx = require("rxjs/Rx");
 const timers_1 = require("timers");
+const Observable_1 = require("rxjs/Observable");
 class RxTestSelf {
     constructor() {
     }
@@ -22,6 +23,140 @@ class RxTestSelf {
         observableTest.subscribe(data => {
             console.log('ok!!!!!!!!1');
         });
+    }
+    testForkJoin() {
+        const subject1 = new Rx.Subject();
+        const subject2 = new Rx.Subject();
+        const subject3 = new Rx.BehaviorSubject(4);
+        var delayedRange = Rx.Observable.create((observe) => {
+            observe.next(1);
+            observe.next(2);
+            observe.next(3);
+            observe.next(4);
+            // setTimeout(() => {
+            //     observe.next(5);
+            // }, 4000);
+            // setTimeout(() => {
+            //     observe.next(6);
+            // }, 2000);
+            // setTimeout(() => {
+            //     observe.next(7);
+            //     observe.complete();
+            // }, 12000);
+            observe.complete();
+        }).subscribe(subject1);
+        const temp2 = Rx.Observable.create((observe) => {
+            observe.next(1);
+            observe.next(2);
+            observe.next(3);
+            observe.next(4);
+            // setTimeout(() => {
+            //     observe.next(8);
+            //     observe.complete();
+            // }, 4000);
+            // setTimeout(() => {
+            //     observe.next(6);
+            // }, 2000);
+            observe.complete();
+        }).subscribe(subject2);
+        const Source = Observable_1.Observable.forkJoin(subject1.map(data => {
+            console.log('tttttttt');
+            return data;
+        }), subject2.map(data => {
+            console.log('sssssssssss');
+            return data;
+        })).map(data => {
+            return data[0] + data[1];
+        }).publishReplay(1).refCount();
+        Source.subscribe(data => {
+            console.log('dfasfsaf', data);
+        });
+        Source.subscribe(data => {
+            console.log('xxxxxxxx', data);
+        });
+        Source.subscribe(data => {
+            console.log('xxxxxxxxffffff', data);
+        });
+        timers_1.setTimeout(() => {
+            Source.subscribe(data => {
+                console.log('xxxxxxxxttttt', data);
+            });
+        }, 3000);
+        return Source;
+    }
+    testFilter() {
+        const subject = new Rx.Subject();
+        const subject1 = new Rx.Subject();
+        const subject2 = new Rx.Subject();
+        subject1.complete();
+        subject.subscribe(data => {
+            console.log('sfsaf');
+        });
+        subject.filter((data) => {
+            console.log(data, 'xxxxxxxx');
+            return data <= 6;
+        }).subscribe(subject1);
+        subject.filter((data) => {
+            console.log(data, 'ssssssssss');
+            return data >= 4;
+        }).subscribe(subject2);
+        var delayedRange = Rx.Observable.create((observe) => {
+            observe.next(1);
+            observe.next(2);
+            observe.next(3);
+            observe.next(4);
+            // setTimeout(() => {
+            //     observe.next(5);
+            // }, 4000);
+            // setTimeout(() => {
+            //     observe.next(6);
+            // }, 2000);
+            // setTimeout(() => {
+            //     observe.next(7);
+            // }, 12000);
+        }).subscribe(subject);
+    }
+    testCaseTake() {
+        const subject = new Rx.Subject();
+        let boolok = true;
+        timers_1.setTimeout(() => {
+            boolok = false;
+        }, 4000);
+        subject.takeWhile(data => {
+            return boolok;
+        }).subscribe(data => {
+            console.log('takeWhile test!!!', data);
+        });
+        subject.subscribe(data => {
+            console.log('nomal test!!!', data);
+        });
+        subject.map(data => {
+            return data * 2;
+        }).take(1).subscribe(data => {
+            console.log(data);
+        });
+        timers_1.setTimeout(() => {
+            subject.map(data => {
+                return data * 2;
+            }).take(1).subscribe(data => {
+                console.log(data);
+            });
+        }, 2500);
+        var delayedRange = Rx.Observable.create((observe) => {
+            observe.next(1);
+            observe.next(2);
+            observe.next(3);
+            observe.next(4);
+            timers_1.setTimeout(() => {
+                observe.next(5);
+            }, 4000);
+            timers_1.setTimeout(() => {
+                observe.next(6);
+            }, 2000);
+            timers_1.setTimeout(() => {
+                observe.next(7);
+            }, 12000);
+        }).subscribe(subject);
     }
     testCaseCreate() {
         const subject = new Rx.Subject();
@@ -157,6 +292,36 @@ class RxTestSelf {
             console.log(data);
         });
     }
+    testCaseForJoin2() {
+        const subject = new Rx.Subject();
+        timers_1.setTimeout(() => {
+            console.log('subject run');
+            subject.next(12);
+        }, 1000);
+        const Temp = Rx.Observable.create((oberse) => {
+            oberse.next(1);
+            oberse.next(2);
+            oberse.complete();
+        });
+        const Temp2 = Rx.Observable.create((oberse) => {
+            console.log('Temp2 run !!!');
+            oberse.next(3);
+            oberse.next(4);
+            oberse.complete();
+        });
+        subject.subscribe(data => {
+        });
+        subject.subscribe(data => {
+        });
+        timers_1.setTimeout(() => {
+            Temp2.subscribe((data) => {
+                console.log('temp2', data);
+            });
+        }, 3000);
+        Rx.Observable.forkJoin(Temp, Temp2).subscribe(data => {
+            console.log(data);
+        });
+    }
 }
 function testReduce() {
     const observable = Rx.Observable.range(1, 6).reduce((acc, value) => {
@@ -168,9 +333,18 @@ function testReduce() {
     });
 }
 const temp = new RxTestSelf();
+temp.testCaseForJoin2();
+// temp.testCaseTake();
+// const xxx = temp.testForkJoin();
+// setTimeout(() => {
+//     xxx.subscribe(data => {
+//         console.log(data);
+//     })
+// }, 20000);
+// temp.testFilter();
 //temp.testCaseCreate(); 
 // temp.testCaseColdHot();
-temp.testCaseCreate();
+//temp.testCaseCreate();
 // testReduce();
 // let data = new Rx.Subject<number>();
 // // data.subscribe(data2 => {
