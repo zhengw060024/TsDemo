@@ -27,23 +27,66 @@ function skipBlankSpace(currentParseInfo:ParseInfo ) {
    }
    return Temp;
 }
-function checkIsOutOfRange(currentParseInfo:ParseInfo,nIndex:number) {
+function checkIsNotOutOfRange(currentParseInfo:ParseInfo,nIndex:number) {
     return currentParseInfo.m_stringOrigin.length >  currentParseInfo.m_currentOffset + nIndex;
 }
-function parseJsonString(strInput:String) {
+function getSubStr(currentParseInfo:ParseInfo,nLenth:number) {
+    return currentParseInfo.m_stringOrigin.substr(currentParseInfo.m_currentOffset,nLenth)
+}
+function parseJsonString(strInput:string) {
+    let parseBuf :ParseInfo=  {
+        m_currentOffset: 0, m_currentParseDepth:0,m_stringOrigin:strInput
+    }
+    skipBlankSpace(parseBuf);
+    let result :JsonObj = {
+        m_currentData:null,
+        m_preItem:null,
+        m_nextItem:null,
+        m_type:null,
+        m_strItemName:null,
+        m_strChild:null
+    }
+    parseValue(parseBuf,result);
 
 }
-function parseValue(currentParseInfo:ParseInfo) {
+function parseValue(currentParseInfo:ParseInfo,jsonItem:JsonObj) :boolean{
+    // 判断是否为null
+    
+    if(checkIsNotOutOfRange(currentParseInfo,3) && getSubStr(currentParseInfo,4) === 'null') {
+        parseNull(currentParseInfo,jsonItem);
+        return true;
+    }
+    // 判断是否为true
+    if(checkIsNotOutOfRange(currentParseInfo,3) && getSubStr(currentParseInfo,4) === 'true') {
+        jsonItem.m_currentData = null;
+        jsonItem.m_type = ObjType.TYPE_BOOL;
+        currentParseInfo.m_currentOffset += 4;
+        return true;
+    }
+    // 判断是否为false
+    if(checkIsNotOutOfRange(currentParseInfo,4) && getSubStr(currentParseInfo,5) === 'false') {
+        jsonItem.m_currentData = null;
+        jsonItem.m_type = ObjType.TYPE_BOOL;
+        currentParseInfo.m_currentOffset += 5;
+        return true;
+    }
+    if(checkIsNotOutOfRange(currentParseInfo,0) && 
+    (getSubStr(currentParseInfo,1) == '-' || 
+    (getSubStr(currentParseInfo,1) <= '9' && getSubStr(currentParseInfo,1) >= '0')) ){
+        return parseNumber(currentParseInfo,jsonItem);
+    }
 
 }
 function parseNull(currentParseInfo:ParseInfo,jsonItem:JsonObj) {
-
-}
-
-function parseTrueOrFalse(currentParseInfo:ParseInfo,jsonItem:JsonObj) {
+    jsonItem.m_currentData = null;
+    jsonItem.m_type = ObjType.TYPE_NULL;
+    currentParseInfo.m_currentOffset += 4;
     
 }
-function parseNumber(currentParseInfo:ParseInfo,jsonItem:JsonObj) {
+
+
+function parseNumber(currentParseInfo:ParseInfo,jsonItem:JsonObj):boolean {
+    return true;
 
 }
 function parseString(currentParseInfo:ParseInfo,jsonItem:JsonObj){
