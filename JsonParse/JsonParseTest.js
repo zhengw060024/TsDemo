@@ -1,46 +1,33 @@
 // json解析测试，阅读cjson源码，编写测试demo
-enum ObjType {
-    TYPE_NULL,
-    TYPE_BOOL,
-    TYPE_NUMBER,
-    TYPE_STRING,
-    TYPE_ARRAY,
-    TYPE_OBJ
-}
-interface JsonObj {
-    m_currentData: string | number ;
-    m_preItem: JsonObj;
-    m_nextItem: JsonObj;
-    m_child: JsonObj;
-    m_type: ObjType;
-    m_strItemName: string;
-    m_strChild: JsonObj;
-}
-interface ParseInfo {
-    m_currentOffset: number;
-    m_currentParseDepth: number;
-    m_stringOrigin: string;
-}
-function skipBlankSpace(currentParseInfo: ParseInfo) {
-    let Temp: String = currentParseInfo.m_stringOrigin.charAt(currentParseInfo.m_currentOffset);
+var ObjType;
+(function (ObjType) {
+    ObjType[ObjType["TYPE_NULL"] = 0] = "TYPE_NULL";
+    ObjType[ObjType["TYPE_BOOL"] = 1] = "TYPE_BOOL";
+    ObjType[ObjType["TYPE_NUMBER"] = 2] = "TYPE_NUMBER";
+    ObjType[ObjType["TYPE_STRING"] = 3] = "TYPE_STRING";
+    ObjType[ObjType["TYPE_ARRAY"] = 4] = "TYPE_ARRAY";
+    ObjType[ObjType["TYPE_OBJ"] = 5] = "TYPE_OBJ";
+})(ObjType || (ObjType = {}));
+function skipBlankSpace(currentParseInfo) {
+    var Temp = currentParseInfo.m_stringOrigin.charAt(currentParseInfo.m_currentOffset);
     while (Temp === " " || Temp === "\t") {
         ++currentParseInfo.m_currentOffset;
         Temp = currentParseInfo.m_stringOrigin.charAt(currentParseInfo.m_currentOffset);
     }
     return Temp;
 }
-function checkIsNotOutOfRange(currentParseInfo: ParseInfo, nIndex: number) {
+function checkIsNotOutOfRange(currentParseInfo, nIndex) {
     return currentParseInfo.m_stringOrigin.length > currentParseInfo.m_currentOffset + nIndex;
 }
-function getSubStr(currentParseInfo: ParseInfo, nStartIndex: number, nLenth: number) {
-    return currentParseInfo.m_stringOrigin.substr(currentParseInfo.m_currentOffset + nStartIndex, nLenth)
+function getSubStr(currentParseInfo, nStartIndex, nLenth) {
+    return currentParseInfo.m_stringOrigin.substr(currentParseInfo.m_currentOffset + nStartIndex, nLenth);
 }
-function parseJsonString(strInput: string) :JsonObj{
-    let parseBuf: ParseInfo = {
+function parseJsonString(strInput) {
+    var parseBuf = {
         m_currentOffset: 0, m_currentParseDepth: 0, m_stringOrigin: strInput
-    }
+    };
     skipBlankSpace(parseBuf);
-    let result: JsonObj = {
+    var result = {
         m_currentData: null,
         m_preItem: null,
         m_nextItem: null,
@@ -48,19 +35,18 @@ function parseJsonString(strInput: string) :JsonObj{
         m_type: null,
         m_strItemName: null,
         m_strChild: null
-    }
-    if(parseValue(parseBuf, result)) {
+    };
+    if (parseValue(parseBuf, result)) {
         skipBlankSpace(parseBuf);
-        if(parseBuf.m_currentOffset === parseBuf.m_stringOrigin.length) {
+        if (parseBuf.m_currentOffset === parseBuf.m_stringOrigin.length) {
             return result;
         }
     }
     console.log('Parse Error,illegal input str');
     return null;
 }
-function parseValue(currentParseInfo: ParseInfo, jsonItem: JsonObj): boolean {
+function parseValue(currentParseInfo, jsonItem) {
     // 判断是否为null
-
     if (checkIsNotOutOfRange(currentParseInfo, 3) && getSubStr(currentParseInfo, 0, 4) === 'null') {
         parseNull(currentParseInfo, jsonItem);
         return true;
@@ -93,21 +79,18 @@ function parseValue(currentParseInfo: ParseInfo, jsonItem: JsonObj): boolean {
     if (checkIsNotOutOfRange(currentParseInfo, 0) && getSubStr(currentParseInfo, 0, 1) === '{') {
         return parseObj(currentParseInfo, jsonItem);
     }
-
 }
-function parseNull(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
+function parseNull(currentParseInfo, jsonItem) {
     jsonItem.m_currentData = null;
     jsonItem.m_type = ObjType.TYPE_NULL;
     currentParseInfo.m_currentOffset += 4;
 }
-
-
-function parseNumber(currentParseInfo: ParseInfo, jsonItem: JsonObj): boolean {
-    let subStrNum: string = '';
-    let offset = 0;
+function parseNumber(currentParseInfo, jsonItem) {
+    var subStrNum = '';
+    var offset = 0;
     while (checkIsNotOutOfRange(currentParseInfo, 0)) {
-        let charTemp = getSubStr(currentParseInfo, offset, 1);
-        let bGoOutloop: boolean = false;
+        var charTemp = getSubStr(currentParseInfo, offset, 1);
+        var bGoOutloop = false;
         switch (charTemp) {
             case '0':
             case '1':
@@ -124,7 +107,7 @@ function parseNumber(currentParseInfo: ParseInfo, jsonItem: JsonObj): boolean {
             case 'e':
             case 'E':
             case '.':
-                ++offset
+                ++offset;
                 subStrNum += charTemp;
                 break;
             default:
@@ -132,24 +115,25 @@ function parseNumber(currentParseInfo: ParseInfo, jsonItem: JsonObj): boolean {
                 break;
         }
         if (bGoOutloop) {
-            break
+            break;
         }
     }
-    let nResult = Number(subStrNum);
+    var nResult = Number(subStrNum);
     if (nResult !== NaN) {
         jsonItem.m_currentData = nResult;
         jsonItem.m_type = ObjType.TYPE_NUMBER;
         currentParseInfo.m_currentOffset += offset;
         return true;
-    } else {
+    }
+    else {
         return false;
     }
 }
-function parseString(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
+function parseString(currentParseInfo, jsonItem) {
     // 需要注意转义字符串的处理
-    let nIndexOffSetEnd = 1;
-    let nTempChar = ''
-    let nSkipWords = 0;
+    var nIndexOffSetEnd = 1;
+    var nTempChar = '';
+    var nSkipWords = 0;
     while (checkIsNotOutOfRange(currentParseInfo, nIndexOffSetEnd)
         && (nTempChar = getSubStr(currentParseInfo, nIndexOffSetEnd, 1)) !== '"') {
         if (nTempChar === '\\') {
@@ -164,32 +148,34 @@ function parseString(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
     if ((!checkIsNotOutOfRange(currentParseInfo, nIndexOffSetEnd)) || (nTempChar !== '"')) {
         return false;
     }
-    let stringOut = '';
-    for (let i = 1; i < nIndexOffSetEnd; ++i) {
-        nTempChar = getSubStr(currentParseInfo, i, 1)
+    var stringOut = '';
+    for (var i = 1; i < nIndexOffSetEnd; ++i) {
+        nTempChar = getSubStr(currentParseInfo, i, 1);
         if (nTempChar !== '\\') {
             stringOut += nTempChar;
-        } else {
+        }
+        else {
             // 判断是否越界
             if (i + 1 >= nIndexOffSetEnd) {
                 return false;
-            } else {
-                let tempCharTrue = getSubStr(currentParseInfo, i + 1, 1);
+            }
+            else {
+                var tempCharTrue = getSubStr(currentParseInfo, i + 1, 1);
                 switch (tempCharTrue) {
                     case 't':
-                        stringOut += '\t'
+                        stringOut += '\t';
                         break;
                     case 'n':
-                        stringOut += '\n'
+                        stringOut += '\n';
                         break;
                     case 'b':
-                        stringOut += '\b'
+                        stringOut += '\b';
                         break;
                     case 'f':
-                        stringOut += '\f'
+                        stringOut += '\f';
                         break;
                     case 'r':
-                        stringOut += '\r'
+                        stringOut += '\r';
                         break;
                     case '\\':
                     case '/':
@@ -208,7 +194,7 @@ function parseString(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
     return true;
 }
 // 这个有子项
-function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
+function parseArray(currentParseInfo, jsonItem) {
     // 判断是否为空：
     currentParseInfo.m_currentOffset++;
     skipBlankSpace(currentParseInfo);
@@ -217,16 +203,16 @@ function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
         jsonItem.m_currentData = null;
         jsonItem.m_child = null;
         jsonItem.m_type = ObjType.TYPE_ARRAY;
-        return true
+        return true;
     }
     if (!checkIsNotOutOfRange(currentParseInfo, 0)) {
-        return false
+        return false;
     }
-    let currentChar = '';
-    let head: JsonObj = null;
-    let currentItem: JsonObj = null;
+    var currentChar = '';
+    var head = null;
+    var currentItem = null;
     do {
-        let resultChild: JsonObj = {
+        var resultChild = {
             m_currentData: null,
             m_preItem: null,
             m_nextItem: null,
@@ -234,19 +220,20 @@ function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
             m_type: null,
             m_strItemName: null,
             m_strChild: null
-        }
+        };
         if (parseValue(currentParseInfo, resultChild)) {
             // 解析成功之后的处理
             if (head === null) {
                 head = resultChild;
                 currentItem = resultChild;
-            } else {
+            }
+            else {
                 currentItem.m_nextItem = resultChild;
                 resultChild.m_preItem = currentItem;
                 currentItem = resultChild;
             }
-
-        } else {
+        }
+        else {
             return false;
         }
         skipBlankSpace(currentParseInfo);
@@ -254,14 +241,16 @@ function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
             if (getSubStr(currentParseInfo, 0, 1) === ',') {
                 currentParseInfo.m_currentOffset++;
                 skipBlankSpace(currentParseInfo);
-            } else if (getSubStr(currentParseInfo, 0, 1) === ']') {
+            }
+            else if (getSubStr(currentParseInfo, 0, 1) === ']') {
                 currentChar = getSubStr(currentParseInfo, 0, 1);
                 break;
-            } else {
+            }
+            else {
                 return false;
             }
-
-        } else {
+        }
+        else {
             return false;
         }
     } while (checkIsNotOutOfRange(currentParseInfo, 0));
@@ -270,12 +259,13 @@ function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
         jsonItem.m_type = ObjType.TYPE_ARRAY;
         ++currentParseInfo.m_currentOffset;
         return true;
-    } else {
+    }
+    else {
         return false;
     }
 }
 // 这个也有子项
-function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
+function parseObj(currentParseInfo, jsonItem) {
     // 
     currentParseInfo.m_currentOffset++;
     skipBlankSpace(currentParseInfo);
@@ -284,14 +274,14 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
         jsonItem.m_currentData = null;
         jsonItem.m_child = null;
         jsonItem.m_type = ObjType.TYPE_OBJ;
-        return true
+        return true;
     }
-    let currentChar = '';
-    let head: JsonObj = null;
-    let currentItem: JsonObj = null;
+    var currentChar = '';
+    var head = null;
+    var currentItem = null;
     do {
         //
-        let resultChild: JsonObj = {
+        var resultChild = {
             m_currentData: null,
             m_preItem: null,
             m_nextItem: null,
@@ -299,19 +289,20 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
             m_type: null,
             m_strItemName: null,
             m_strChild: null
-        }
+        };
         if (checkIsNotOutOfRange(currentParseInfo, 0) && getSubStr(currentParseInfo, 0, 1) === '"') {
             if (parseString(currentParseInfo, resultChild)) {
                 skipBlankSpace(currentParseInfo);
                 if (checkIsNotOutOfRange(currentParseInfo, 0) && getSubStr(currentParseInfo, 0, 1) === ':') {
                     skipBlankSpace(currentParseInfo);
                     if (checkIsNotOutOfRange(currentParseInfo, 0)) {
-                        resultChild.m_strItemName = <string>(resultChild.m_currentData);
+                        resultChild.m_strItemName = (resultChild.m_currentData);
                         if (parseValue(currentParseInfo, resultChild)) {
                             if (head === null) {
                                 head = resultChild;
                                 currentItem = resultChild;
-                            } else {
+                            }
+                            else {
                                 currentItem.m_nextItem = resultChild;
                                 resultChild.m_preItem = currentItem;
                                 currentItem = resultChild;
@@ -321,43 +312,48 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
                                 if (getSubStr(currentParseInfo, 0, 1) === ',') {
                                     currentParseInfo.m_currentOffset++;
                                     skipBlankSpace(currentParseInfo);
-                                } else if (getSubStr(currentParseInfo, 0, 1) === '}') {
+                                }
+                                else if (getSubStr(currentParseInfo, 0, 1) === '}') {
                                     currentChar = getSubStr(currentParseInfo, 0, 1);
                                     break;
-                                } else {
+                                }
+                                else {
                                     return false;
                                 }
-
-                            } else {
+                            }
+                            else {
                                 return false;
                             }
-                        } else {
+                        }
+                        else {
                             return false;
                         }
-                    } else {
+                    }
+                    else {
                         return false;
                     }
-
-                } else {
+                }
+                else {
                     return false;
                 }
-
-            } else {
+            }
+            else {
                 return false;
             }
-        } else {
+        }
+        else {
             return false;
         }
-
     } while (checkIsNotOutOfRange(currentParseInfo, 0));
     if (checkIsNotOutOfRange(currentParseInfo, 0) && currentChar === ']') {
         jsonItem.m_child = head;
         jsonItem.m_type = ObjType.TYPE_OBJ;
         ++currentParseInfo.m_currentOffset;
         return true;
-    } else {
+    }
+    else {
         return false;
     }
 }
-let strTemp = "null";
+var strTemp = "null";
 parseJsonString(strTemp);
