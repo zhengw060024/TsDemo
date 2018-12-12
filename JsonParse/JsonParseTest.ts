@@ -260,7 +260,6 @@ function parseArray(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
             } else {
                 return false;
             }
-
         } else {
             return false;
         }
@@ -300,10 +299,12 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
             m_strItemName: null,
             m_strChild: null
         }
+        let bParseErrorHappened = true;
         if (checkIsNotOutOfRange(currentParseInfo, 0) && getSubStr(currentParseInfo, 0, 1) === '"') {
             if (parseString(currentParseInfo, resultChild)) {
                 skipBlankSpace(currentParseInfo);
                 if (checkIsNotOutOfRange(currentParseInfo, 0) && getSubStr(currentParseInfo, 0, 1) === ':') {
+                    ++currentParseInfo.m_currentOffset;
                     skipBlankSpace(currentParseInfo);
                     if (checkIsNotOutOfRange(currentParseInfo, 0)) {
                         resultChild.m_strItemName = <string>(resultChild.m_currentData);
@@ -321,36 +322,23 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
                                 if (getSubStr(currentParseInfo, 0, 1) === ',') {
                                     currentParseInfo.m_currentOffset++;
                                     skipBlankSpace(currentParseInfo);
+                                    bParseErrorHappened = false;
                                 } else if (getSubStr(currentParseInfo, 0, 1) === '}') {
                                     currentChar = getSubStr(currentParseInfo, 0, 1);
+                                    bParseErrorHappened = false;
                                     break;
-                                } else {
-                                    return false;
-                                }
-
-                            } else {
-                                return false;
-                            }
-                        } else {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-
-                } else {
-                    return false;
-                }
-
-            } else {
-                return false;
-            }
-        } else {
+                                } 
+                            } 
+                        } 
+                    } 
+                } 
+            } 
+        } 
+        if(bParseErrorHappened) {
             return false;
         }
-
     } while (checkIsNotOutOfRange(currentParseInfo, 0));
-    if (checkIsNotOutOfRange(currentParseInfo, 0) && currentChar === ']') {
+    if (checkIsNotOutOfRange(currentParseInfo, 0) && currentChar === '}') {
         jsonItem.m_child = head;
         jsonItem.m_type = ObjType.TYPE_OBJ;
         ++currentParseInfo.m_currentOffset;
@@ -359,5 +347,6 @@ function parseObj(currentParseInfo: ParseInfo, jsonItem: JsonObj) {
         return false;
     }
 }
-let strTemp = "null";
-parseJsonString(strTemp);
+let strTemp = '{"recordsFiltered":936,"data":[{"id":null,"questionIds":"6208","uniqueCode":null,"content":"你是谁","companyCode":"xiaoma","questionType":0,"questionTypeName":null,"questionScene":0,"questionSceneName":null,"answerId":null,"answerContent":"我是小马，谢谢你的使用@|||@我是小马，您好","qaMappingCode":"31c94b1e39194f14af49171e39c4f00b","updateTime":"2018-12-04 11:26:51","questionSceneNext":0,"questionSceneNextName":null},{"id":null,"questionIds":"6190","uniqueCode":null,"content":"汽车类型有哪些？","companyCode":"xiaoma","questionType":188,"questionTypeName":"汽车","questionScene":259,"questionSceneName":"汽车类型","answerId":null,"answerContent":"燃油车、电动车、混动车","qaMappingCode":"8e13fa390ab0489db123249e3c16f553","updateTime":"2018-12-04 11:17:43","questionSceneNext":0,"questionSceneNextName":null},{"id":null,"questionIds":"6207","uniqueCode":null,"content":"这是个郑伟的测试问题","companyCode":"xiaoma","questionType":0,"questionTypeName":null,"questionScene":0,"questionSceneName":null,"answerId":null,"answerContent":"测试问题答案一    ","qaMappingCode":"8426538eef774ee48b571edf064cb286","updateTime":"2018-12-04 11:17:31","questionSceneNext":0,"questionSceneNextName":null},{"id":null,"questionIds":"6193","uniqueCode":null,"content":"新能源汽车品牌有哪些？","companyCode":"xiaoma","questionType":189,"questionTypeName":"汽车2","questionScene":262,"questionSceneName":"汽车类型2","answerId":null,"answerContent":"新能源汽车品牌众多","qaMappingCode":"0b78c83947884328a3646fde8d164a8f","updateTime":"2018-12-03 11:03:40","questionSceneNext":261,"questionSceneNextName":"品牌-新能源"},{"id":null,"questionIds":"6192","uniqueCode":null,"content":"汽车类型","companyCode":"xiaoma","questionType":189,"questionTypeName":"汽车2","questionScene":262,"questionSceneName":"汽车类型2","answerId":null,"answerContent":"燃油车、电动车、混动车","qaMappingCode":"1afba540be6141a2a8ec01fdd7a082f4","updateTime":"2018-12-03 11:03:40","questionSceneNext":260,"questionSceneNextName":"新能源-汽车"}],"recordsTotal":936}';
+let item = parseJsonString(strTemp);
+console.log('parse success!')
