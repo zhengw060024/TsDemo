@@ -1,3 +1,8 @@
+/**
+ * 这个是在网上看到的一个有趣的题目，
+ * 输入一个字符串，获取其最连续无重复字符的子串
+ * @param str 
+ */
 function getMaxNoSameSubStr(str:string) :number{
     let obj ={
 
