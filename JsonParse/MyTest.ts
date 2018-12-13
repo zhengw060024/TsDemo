@@ -8,18 +8,23 @@ function getMaxNoSameSubStr(str:string) :number{
     for(let i = 0; i< str.length; ++i){
         let nNum = obj[str.charAt(i)];
         if( nNum === undefined) {
-            obj[str.charAt(i)] = i;
+            
             nCurrentMax++;
         } else if(nNum < nStartIndex) {
-            obj[str.charAt(i)] = nStartIndex;
+            
             ++nCurrentMax;
         } else {
             if(nCurrentMax > nMax) {
                 nMax = nCurrentMax;
             }
             nCurrentMax = nCurrentMax - (nNum - nStartIndex);
-            nStartIndex = nNum - nStartIndex + 1;
+            nStartIndex = nNum + 1;
+            
         }
+        obj[str.charAt(i)] = i;
+    }
+    if(nCurrentMax > nMax) {
+        nMax = nCurrentMax;
     }
     return nMax;
 }
